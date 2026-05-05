@@ -215,4 +215,19 @@
 </script>
 </body>
 </html>
+async function sendMessage() {
+  const message = userInput.value.trim();
+  if (!message) return;
 
+  appendMessage(message, 'user');
+  userInput.value = '';
+
+  // Call your backend API
+  const response = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message }),
+  });
+  const data = await response.json();
+  appendMessage(data.reply, 'bot');
+}
