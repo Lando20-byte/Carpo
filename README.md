@@ -1,10 +1,11 @@
-# Carpo
-Ai website
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Carpo AI Chatbot</title>
+<!-- Load Google Sign-In SDK -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -17,6 +18,10 @@ Ai website
     color: #fff;
     padding: 1em;
     text-align: center;
+  }
+  #g_id_onload, #g_id_signin {
+    margin: 10px auto;
+    display: none;
   }
   #chat-container {
     max-width: 600px;
@@ -63,6 +68,10 @@ Ai website
   #send-btn:hover {
     background-color: #555;
   }
+  #signInDiv {
+    text-align: center;
+    margin: 20px;
+  }
 </style>
 </head>
 <body>
@@ -70,7 +79,11 @@ Ai website
   <h1>Welcome to Carpo AI Chatbot</h1>
 </header>
 
-<div id="chat-container">
+<!-- Google Sign-In Button -->
+<div id="signInDiv"></div>
+
+<!-- Chat Container (hidden until signed in) -->
+<div id="chat-container" style="display:none;">
   <div id="messages"></div>
   <div id="input-area">
     <input type="text" id="user-input" placeholder="Type your message..." />
@@ -79,11 +92,42 @@ Ai website
 </div>
 
 <script>
+  let userEmail = '';
+
+  // Initialize Google Sign-In
+  window.onload = function() {
+    google.accounts.id.initialize({
+      client_id: 'YOUR_GOOGLE_CLIENT_ID', // Replace with your Google Client ID
+      callback: handleCredentialResponse
+    });
+    google.accounts.id.renderButton(
+      document.getElementById("signInDiv"),
+      { theme: "outline", size: "large" } // customization attributes
+    );
+    google.accounts.id.prompt(); // Also display the One Tap prompt
+  };
+
+  function handleCredentialResponse(response) {
+    // Decode JWT token to get user info
+    const data = parseJwt(response.credential);
+    userEmail = data.email;
+    document.getElementById('signInDiv').style.display = 'none';
+    document.getElementById('chat-container').style.display = 'flex';
+  }
+
+  function parseJwt(token) {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  }
+
   const messagesDiv = document.getElementById('messages');
   const userInput = document.getElementById('user-input');
   const sendBtn = document.getElementById('send-btn');
 
-  // Function to append message
   function appendMessage(text, sender) {
     const msgDiv = document.createElement('div');
     msgDiv.className = 'message ' + sender;
@@ -92,7 +136,6 @@ Ai website
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
   }
 
-  // Function to handle sending message
   async function sendMessage() {
     const message = userInput.value;
     if (!message) return;
@@ -104,13 +147,13 @@ Ai website
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, email: userEmail }),
     });
     const data = await response.json();
     appendMessage(data.reply, 'bot');
   }
 
-  sendBtn.onclick = sendMessage;
+  document.getElementById('send-btn').onclick = sendMessage;
   userInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') sendMessage();
   });
