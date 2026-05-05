@@ -161,7 +161,7 @@
       signinContainer.style.display = 'none';
       chatContainer.style.display = 'flex';
 
-      // Optionally, display a welcome message with email
+      // Welcome message
       appendMessage('Hi! You are signed in as ' + userEmail, 'bot');
     } else {
       alert('Please enter a valid email.');
@@ -197,14 +197,15 @@
     appendMessage(message, 'user');
     userInput.value = '';
 
-    // Send to your backend API
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, email: userEmail }),
-    });
-    const data = await response.json();
-    appendMessage(data.reply, 'bot');
+    // Simulated reply (replace with your API call if needed)
+    // const response = await fetch('/api/chat', { ... });
+    // const data = await response.json();
+
+    // For demo, generate a canned reply
+    const reply = "You said: " + message;
+    setTimeout(() => {
+      appendMessage(reply, 'bot');
+    }, 500);
   }
 
   document.getElementById('send-btn').onclick = sendMessage;
