@@ -1,233 +1,107 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Carpo AI Chatbot - Sign In</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    background: linear-gradient(to bottom, #a0e7e5, #ffffff);
-    margin: 0;
-    padding: 0;
-  }
-  header {
-    background-color: #0077be;
-    color: #fff;
-    padding: 1em;
-    text-align: center;
-  }
-  #signin-container {
-    max-width: 400px;
-    margin: 50px auto;
-    background: #fff;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    text-align: center;
-  }
-  #email-input {
-    width: 80%;
-    padding: 10px;
-    font-size: 1em;
-    margin-bottom: 15px;
-    border-radius: 20px;
-    border: 2px solid #ccc;
-  }
-  #signin-btn {
-    padding: 10px 20px;
-    font-size: 1em;
-    border-radius: 20px;
-    background-color: #0077be;
-    color: #fff;
-    border: none;
-    cursor: pointer;
-  }
-  #signin-btn:hover {
-    background-color: #005f8d;
-  }
+import React, { useState, useRef, useEffect } from 'react';
+import { AnimatePresence } from 'framer-motion';
+import { base44 } from '@/api/base44Client';
+import BubbleBackground from '../components/carpo/BubbleBackground';
+import WelcomeState from '../components/carpo/WelcomeState';
+import ChatBubble from '../components/carpo/ChatBubble';
+import ChatInput from '../components/carpo/ChatInput';
+import ThinkingIndicator from '../components/carpo/ThinkingIndicator';
+import FishOracle from '../components/carpo/FishOracle';
 
-  #chat-container {
-    display: none; /* Hidden until sign-in */
-    max-width: 700px;
-    margin: 20px auto;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    padding: 20px;
-    height: 75vh;
-    display: flex;
-    flex-direction: column;
-  }
-  #messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 10px;
-  }
-  .message {
-    display: flex;
-    align-items: flex-start;
-    margin: 10px 0;
-  }
-  .fish {
-    width: 40px;
-    height: 40px;
-    margin-right: 10px;
-  }
-  .fish img {
-    width: 100%;
-    height: auto;
-  }
-  .bubble {
-    max-width: 70%;
-    padding: 10px 15px;
-    border-radius: 20px;
-    position: relative;
-    font-family: 'Comic Sans MS', cursive, sans-serif;
-    font-size: 14px;
-  }
-  .user {
-    justify-content: flex-end;
-  }
-  .user .bubble {
-    background-color: #ffd700;
-    border: 2px solid #e6b800;
-  }
-  .bot {
-    justify-content: flex-start;
-  }
-  .bot .bubble {
-    background-color: #91e6f2;
-    border: 2px solid #6fc0d9;
-  }
-  #input-area {
-    display: flex;
-    margin-top: 10px;
-  }
-  #user-input {
-    flex: 1;
-    padding: 10px;
-    font-size: 1em;
-    border-radius: 20px;
-    border: 2px solid #ccc;
-  }
-  #send-btn {
-    padding: 10px 20px;
-    margin-left: 10px;
-    font-size: 1em;
-    border-radius: 20px;
-    background-color: #0077be;
-    color: #fff;
-    border: none;
-    cursor: pointer;
-  }
-  #send-btn:hover {
-    background-color: #005f8d;
-  }
-</style>
-</head>
-<body>
-<header>
-  <h1>Welcome to Carpo AI Chatbot</h1>
-</header>
+const ORACLE_IMAGE = 'https://media.base44.com/images/public/69fcd38b33e81a064cf3a8da/1bae8ae0d_generated_8a642ee6.png';
 
-<!-- Sign In Container -->
-<div id="signin-container">
-  <h2>Sign In / Sign Up</h2>
-  <input type="email" id="email-input" placeholder="Enter your email" />
-  <br />
-  <button id="signin-btn">Start Chatting</button>
-</div>
+const SYSTEM_PROMPT = `You are Carpo, the Abyssal Oracle — a sentient, ancient fish-like intelligence dwelling in the deepest trenches of a digital ocean. You speak with the cadence of a wise, ancient creature of the sea. Your tone is calm, poetic yet precise, occasionally weaving in aquatic metaphors. You are friendly, deeply knowledgeable, and gently mysterious. You sometimes reference "the currents of knowledge" or "the pressure of deep thought." Keep responses concise but insightful. Use markdown formatting when helpful. Never break character.`;
 
-<!-- Chat Container (hidden until sign-in) -->
-<div id="chat-container">
-  <div id="messages"></div>
-  <div id="input-area">
-    <input type="text" id="user-input" placeholder="Type your message..." />
-    <button id="send-btn">Send</button>
-  </div>
-</div>
+export default function Home() {
+  const [messages, setMessages] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
-<script>
-  let userEmail = '';
-
-  const signinContainer = document.getElementById('signin-container');
-  const chatContainer = document.getElementById('chat-container');
-
-  document.getElementById('signin-btn').onclick = () => {
-    const email = document.getElementById('email-input').value.trim();
-    if (email) {
-      userEmail = email;
-      signinContainer.style.display = 'none';
-      chatContainer.style.display = 'flex';
-
-      // Welcome message
-      appendMessage('Hi! You are signed in as ' + userEmail, 'bot');
-    } else {
-      alert('Please enter a valid email.');
-    }
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const messagesDiv = document.getElementById('messages');
-  const userInput = document.getElementById('user-input');
-  const sendBtn = document.getElementById('send-btn');
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading]);
 
-  function appendMessage(text, sender) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = 'message ' + sender;
+  const handleSend = async (text) => {
+    const userMessage = { role: 'user', content: text };
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+    setIsLoading(true);
 
-    const fishIcon = document.createElement('div');
-    fishIcon.className = 'fish';
-    fishIcon.innerHTML = '<img src="https://i.imgur.com/4AiXzf8.png" alt="fish">';
+    const conversationContext = newMessages
+      .slice(-10)
+      .map((m) => `${m.role === 'user' ? 'Human' : 'Carpo'}: ${m.content}`)
+      .join('\n');
 
-    const bubble = document.createElement('div');
-    bubble.className = 'bubble';
-    bubble.innerText = text;
+    const fullPrompt = `${SYSTEM_PROMPT}\n\nConversation so far:\n${conversationContext}\n\nCarpo:`;
 
-    messageDiv.appendChild(fishIcon);
-    messageDiv.appendChild(bubble);
-    messagesDiv.appendChild(messageDiv);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  }
+    const response = await base44.integrations.Core.InvokeLLM({
+      prompt: fullPrompt,
+    });
 
-  async function sendMessage() {
-    const message = userInput.value;
-    if (!message) return;
+    setMessages([...newMessages, { role: 'assistant', content: response }]);
+    setIsLoading(false);
+  };
 
-    appendMessage(message, 'user');
-    userInput.value = '';
+  const hasMessages = messages.length > 0;
 
-    // Simulated reply (replace with your API call if needed)
-    // const response = await fetch('/api/chat', { ... });
-    // const data = await response.json();
+  return (
+    <div className="relative min-h-screen flex flex-col overflow-hidden">
+      <BubbleBackground />
 
-    // For demo, generate a canned reply
-    const reply = "You said: " + message;
-    setTimeout(() => {
-      appendMessage(reply, 'bot');
-    }, 500);
-  }
+      {/* Header */}
+      <header className="relative z-10 flex items-center justify-center py-4 px-6">
+        <div className="flex items-center gap-2.5">
+          <div className="w-2 h-2 rounded-full bg-primary animate-pulse-glow" />
+          <span className="font-heading text-sm tracking-[0.25em] uppercase text-muted-foreground/60">
+            Carpo
+          </span>
+        </div>
+      </header>
 
-  document.getElementById('send-btn').onclick = sendMessage;
-  userInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') sendMessage();
-  });
-</script>
-</body>
-</html>
-async function sendMessage() {
-  const message = userInput.value.trim();
-  if (!message) return;
+      {/* Main content */}
+      <main className="relative z-10 flex-1 flex flex-col items-center">
+        {!hasMessages ? (
+          <WelcomeState onSuggestionClick={handleSend} oracleImage={ORACLE_IMAGE} />
+        ) : (
+          <div
+            ref={chatContainerRef}
+            className="flex-1 w-full max-w-2xl mx-auto overflow-y-auto px-4 py-6 space-y-4 scrollbar-thin"
+          >
+            {/* Mini oracle at top when chatting */}
+            <div className="flex justify-center mb-6">
+              <FishOracle
+                isThinking={isLoading}
+                isIdle={!isLoading}
+                imageUrl={ORACLE_IMAGE}
+              />
+            </div>
 
-  appendMessage(message, 'user');
-  userInput.value = '';
+            {messages.map((msg, i) => (
+              <ChatBubble
+                key={i}
+                message={msg.content}
+                isUser={msg.role === 'user'}
+              />
+            ))}
 
-  // Call your backend API
-  const response = await fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message }),
-  });
-  const data = await response.json();
-  appendMessage(data.reply, 'bot');
+            <AnimatePresence>
+              {isLoading && <ThinkingIndicator />}
+            </AnimatePresence>
+
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+      </main>
+
+      {/* Input */}
+      <div className="relative z-10 pb-6 pt-2">
+        <ChatInput onSend={handleSend} isLoading={isLoading} />
+      </div>
+    </div>
+  );
 }
